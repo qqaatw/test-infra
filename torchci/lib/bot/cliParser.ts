@@ -48,8 +48,7 @@ mergeOption.add_argument("-f", "--force", {
 mergeOption.add_argument("-ic", "--ignore-current", {
   action: "store_true",
   help:
-    "Merge while ignore the currently failing jobs.  If there are no pending checks, use -f/--force " +
-    "since this will fail.",
+    "Merge while ignore the currently failing jobs.",
 });
 merge.add_argument("-r", "--rebase", {
   help: "Rebase the PR to re run checks before merging.  Accepts viable/strict or master as branch options and " +
