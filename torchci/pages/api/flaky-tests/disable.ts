@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getOctokit } from "lib/github";
 import fetchFlakyTests, {
   fetchFlakyTestsAcrossJobs,
+  fetchFlakyTestsAcrossFileReruns,
 } from "lib/fetchFlakyTests";
 import fetchDisabledNonFlakyTests from "lib/fetchDisabledNonFlakyTests";
 import { FlakyTestData, IssueData, DisabledNonFlakyTestData } from "lib/types";
@@ -23,7 +24,8 @@ export default async function handler(
 ) {
   const authorization = req.headers.authorization;
   if (authorization === process.env.FLAKY_TEST_BOT_KEY) {
-    await disableFlakyTestsAndReenableNonFlakyTests();
+    await fetchFlakyTestsAcrossFileReruns(`${NUM_HOURS}`)
+    // await disableFlakyTestsAndReenableNonFlakyTests();
     res.status(200).end();
   }
   res.status(403).end();
@@ -33,18 +35,20 @@ async function disableFlakyTestsAndReenableNonFlakyTests() {
   const [
     octokit,
     flakyTests,
+    flakyTestsAcrossFileReruns,
     flakyTestsAcrossJobs,
     issues,
     disabledNonFlakyTests,
   ] = await Promise.all([
     getOctokit(owner, repo),
     fetchFlakyTests(`${NUM_HOURS}`),
+    fetchFlakyTestsAcrossFileReruns(`${NUM_HOURS}`),
     fetchFlakyTestsAcrossJobs(`${NUM_HOURS_ACROSS_JOBS}`), // use a larger time window so we can get more data
     fetchIssuesByLabel("skipped"),
     fetchDisabledNonFlakyTests(),
   ]);
 
-  const allFlakyTests = flakyTests.concat(flakyTestsAcrossJobs);
+  const allFlakyTests = flakyTests.concat(flakyTestsAcrossJobs).concat(flakyTestsAcrossFileReruns);
   // If the test is flaky only on PRs, we should not disable it yet.
   const flakyTestsOnTrunk = filterThreshold(
     filterOutPRFlakyTests(allFlakyTests)
