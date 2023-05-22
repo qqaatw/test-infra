@@ -575,10 +575,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
       );
 
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestA.file,
-        flakyTestA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(additionalErrMessage).toEqual(undefined);
     expect(labels).toEqual(["module: fft", "triaged"]);
 
@@ -598,10 +595,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
         )
       );
 
-    const { labels } = await disableFlakyTestBot.getTestOwnerLabels(
-      flakyTestA.file,
-      flakyTestA.invoking_file
-    );
+    const { labels } = await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(labels).toEqual(["oncall: distributed"]);
 
     if (!scope.isDone()) {
@@ -621,10 +615,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
       );
 
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestA.file,
-        flakyTestA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(labels).toEqual(["module: unknown"]);
     expect(additionalErrMessage).toEqual(undefined);
 
@@ -643,10 +634,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
       );
 
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestA.file,
-        flakyTestA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(labels).toEqual(["module: unknown"]);
     expect(additionalErrMessage).toEqual(undefined);
 
@@ -676,10 +664,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
       .reply(404);
 
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestA.file,
-        flakyTestA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(labels).toEqual(["module: unknown"]);
     expect(additionalErrMessage).toEqual(
       "Error: Error retrieving file_a.py: 404, file_a: 404"
@@ -701,10 +686,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
         Buffer.from(`# Owner(s): ["module: fft"]\nimport blah;\nrest of file`)
       );
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestA.file,
-        flakyTestA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestA);
     expect(labels).toEqual(["module: fft", "triaged"]);
     expect(additionalErrMessage).toEqual(undefined);
 
@@ -730,10 +712,7 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
         Buffer.from(`# Owner(s): ["module: fft"]\nimport blah;\nrest of file`)
       );
     const { labels, additionalErrMessage } =
-      await disableFlakyTestBot.getTestOwnerLabels(
-        flakyTestAcrossJobA.file,
-        flakyTestAcrossJobA.invoking_file
-      );
+      await disableFlakyTestBot.getTestOwnerLabels(flakyTestAcrossJobA);
     expect(labels).toEqual(["module: fft", "triaged"]);
     expect(additionalErrMessage).toEqual(undefined);
 
@@ -741,6 +720,41 @@ describe("Disable Flaky Test Bot Unit Tests", () => {
       console.error("pending mocks: %j", scope.pendingMocks());
     }
     scope.done();
+  });
+
+  test("getTestOwnerLabels: give dynamo and inductor oncall: pt2 label", async () => {
+    const test = { ...flakyTestA };
+    test.jobNames = ["dynamo linux"];
+
+    let scope = nock("https://raw.githubusercontent.com/")
+      .get(`/pytorch/pytorch/main/test/${test.file}`)
+      .reply(
+        200,
+        Buffer.from(`# Owner(s): ["module: fft"]\nimport blah;\nrest of file`)
+      );
+
+    let { labels, additionalErrMessage } =
+      await disableFlakyTestBot.getTestOwnerLabels(test);
+    expect(additionalErrMessage).toEqual(undefined);
+    expect(labels).toEqual(["module: fft", "oncall: pt2", "triaged"]);
+
+    handleScope(scope);
+  });
+
+  test("getTestOwnerLabels: give dynamo and inductor oncall: pt2 label, unknown owner", async () => {
+    const test = { ...flakyTestA };
+    test.jobNames = ["inductor linux"];
+
+    let scope = nock("https://raw.githubusercontent.com/")
+      .get(`/pytorch/pytorch/main/test/${test.file}`)
+      .reply(200, Buffer.from(`import blah;\nrest of file`));
+
+    let { labels, additionalErrMessage } =
+      await disableFlakyTestBot.getTestOwnerLabels(test);
+    expect(additionalErrMessage).toEqual(undefined);
+    expect(labels).toEqual(["module: unknown", "oncall: pt2"]);
+
+    handleScope(scope);
   });
 
   test("getLatestTrunkJobURL: should return URL of last trunk job if it exists", async () => {
