@@ -9,6 +9,7 @@ WITH performance_results AS (
         '_performance'
       )
     ) AS filename,
+    abs_latency,
     compilation_latency,
     compression_ratio,
     workflow_id,
@@ -78,6 +79,10 @@ results AS (
       0.0
     ) AS speedup,
     accuracy,
+    IF(TRY_CAST(abs_latency AS FLOAT) IS NOT NULL,
+      CAST(abs_latency AS FLOAT),
+      0.0
+    ) AS abs_latency,
     IF(TRY_CAST(compilation_latency AS FLOAT) IS NOT NULL,
       CAST(compilation_latency AS FLOAT),
       0.0
@@ -101,6 +106,7 @@ SELECT DISTINCT
   results.name,
   results.speedup,
   results.accuracy,
+  results.abs_latency,
   results.compilation_latency,
   results.compression_ratio,
   FORMAT_ISO8601(
